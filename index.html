@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romaji Master</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Noto+Sans+JP:wght@500;700&family=Noto+Sans+KR:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Romaji Master</h1>
+          <p>일본어 로마자 컴퓨터 타자 연습</p>
+        </div>
+        <div id="home-actions">
+          <button class="ghost-btn" id="how-btn" type="button">입력 규칙</button>
+          <button class="ghost-btn" id="tips-btn" type="button">로마자 자동완성 규칙 팁</button>
+        </div>
+        <div id="practice-actions" class="hidden">
+          <button class="toggle-btn" id="roma-toggle" type="button" aria-pressed="true" title="로마자 요미카타 보이기/숨기기">
+            <span>ローマ字</span>
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+          <button class="ghost-btn" id="table-btn" type="button">로마자 표</button>
+          <button class="ghost-btn" id="home-btn" type="button">홈</button>
+        </div>
+      </header>
+
+      <section id="home-view">
+        <div class="panel">
+          <div class="section-title">
+            <h2>로마자 변환표</h2>
+            <span>いつでも確認できるローマ字表</span>
+          </div>
+          <div class="romaji-wrap" id="romaji-home"></div>
+          <p class="hint">
+            し는 <b>si</b>, ち는 <b>chi</b>, つ는 <b>tsu</b>, ふ는 <b>hu</b>, ん은 끝에서 <b>nn</b>으로 연습합니다.
+            長音(ー)은 하이픈 <b>-</b> 키입니다.
+          </p>
+        </div>
+
+        <div class="section-title" style="margin-top: 28px">
+          <h2>연습 목록</h2>
+          <span>각 100문항 · 시작 시 순서는 랜덤</span>
+        </div>
+        <div class="cards" id="category-cards"></div>
+      </section>
+
+      <section id="practice-view" class="hidden">
+        <div class="panel">
+          <div class="practice-head">
+            <div class="progress-wrap">
+              <div class="progress-meta">
+                <span id="category-label"></span>
+                <span id="progress-label">1 / 20</span>
+              </div>
+              <div class="bar"><span id="progress-bar"></span></div>
+            </div>
+          </div>
+
+          <div class="stage">
+            <div class="yomi" id="yomi" aria-label="요미카타"></div>
+            <div class="ja" id="ja"></div>
+            <div class="ko" id="ko"></div>
+          </div>
+
+          <div class="keyboard" id="keyboard"></div>
+          <p class="ime-note">영문(英数) 입력으로 두고 타자하세요 · IME는 꺼 주세요</p>
+        </div>
+      </section>
+
+      <section id="result-view" class="hidden">
+        <div class="panel result">
+          <h2>챕터 완료</h2>
+          <p id="result-copy">연습이 끝났습니다.</p>
+          <div class="stats">
+            <div class="stat">
+              <b id="stat-total">20</b>
+              <span>전체</span>
+            </div>
+            <div class="stat">
+              <b id="stat-ok">20</b>
+              <span>무결점</span>
+            </div>
+            <div class="stat">
+              <b id="stat-miss">0</b>
+              <span>실수 있는 문항</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary-btn hidden" id="retry-wrong-btn" type="button">틀린 것만</button>
+            <button class="danger-btn" id="retry-all-btn" type="button">처음부터 다시</button>
+            <button class="ghost-btn" id="result-home-btn" type="button">홈으로</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="overlay hidden" id="table-overlay">
+      <div class="panel">
+        <div class="section-title">
+          <h2>로마자 변환표</h2>
+          <button class="ghost-btn" id="close-table-btn" type="button">닫기</button>
+        </div>
+        <div class="romaji-wrap" id="romaji-modal"></div>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="tips-overlay">
+      <div class="panel tips-panel">
+        <div class="section-title">
+          <h2>로마자 자동완성 규칙 팁</h2>
+          <button class="ghost-btn" id="close-tips-btn" type="button">닫기</button>
+        </div>
+        <p class="tips-lead">
+          실제 일본어 IME에서는 로마자를 치면 먼저 <b>히라가나</b>가 나옵니다.
+          그다음 스페이스·엔터·탭·F키로 한자·가타카나로 바꿉니다.
+        </p>
+
+        <div class="flow">
+          <div class="flow-step">
+            <span class="flow-k">ko-hi-</span>
+            <small>로마자</small>
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step">
+            <span class="flow-k">こーひー</span>
+            <small>히라가나</small>
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step accent">
+            <span class="flow-k">コーヒー</span>
+            <small>가타카나 변환</small>
+          </div>
+        </div>
+
+        <h3 class="tips-h">기본 키</h3>
+        <div class="tip-grid">
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>Space</kbd></div>
+            <h4>변환 (変換)</h4>
+            <p>히라가나를 한자·가타카나 후보로 바꿉니다. 한 번 더 누르면 다음 후보입니다.</p>
+            <p class="tip-ex">こんにちは + Space → 今日は / こんにちは / コンニチハ</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>Enter</kbd></div>
+            <h4>확정 (確定)</h4>
+            <p>지금 글자를 그대로 확정합니다. 후보를 고른 뒤에도 Enter로 넣습니다.</p>
+            <p class="tip-ex">변환하지 않고 히라가나 그대로 남기고 싶을 때도 Enter</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>Tab</kbd></div>
+            <h4>다음 후보 / 문절 이동</h4>
+            <p>IME에 따라 다음 후보로 넘어가거나, 변환할 덩어리(文節)를 옮깁니다.</p>
+            <p class="tip-ex">Shift+Tab 은 이전 후보 · Windows에서는 Tab으로 변환하기도 함</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>Esc</kbd></div>
+            <h4>취소</h4>
+            <p>변환을 취소하고 히라가나 상태로 되돌립니다. 미확정 글자를 지울 때도 씁니다.</p>
+          </article>
+        </div>
+
+        <h3 class="tips-h">히라가나 → 가타카나</h3>
+        <div class="tip-grid two">
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>F7</kbd></div>
+            <h4>전체 가타카나</h4>
+            <p>아직 확정하지 않은 히라가나를 전각 가타카나로 바꿉니다. 외래어에 가장 많이 씁니다.</p>
+            <p class="tip-ex">こーひー + F7 → コーヒー</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>F8</kbd></div>
+            <h4>반각 가타카나</h4>
+            <p>반각 カタカナ로 바꿉니다. 예전 시스템·폭이 좁은 표에서 씁니다.</p>
+            <p class="tip-ex">コーヒー + F8 → ｺｰﾋｰ</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>Space</kbd> 여러 번</div>
+            <h4>후보에서 고르기</h4>
+            <p>Space를 눌러 변환 목록을 넘기다 보면 가타카나 후보가 나옵니다. 숫자 키 1~9로도 고를 수 있습니다.</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys">macOS <kbd>Ctrl</kbd>+<kbd>K</kbd></div>
+            <h4>맥 단축키</h4>
+            <p>Mac은 Ctrl+K 가 가타카나, Ctrl+J 가 히라가나입니다. カナ 모드로 바꿔 처음부터 가타카나로 칠 수도 있습니다.</p>
+          </article>
+        </div>
+
+        <h3 class="tips-h">그 외 자동완성 · 변환</h3>
+        <div class="tip-grid">
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>F6</kbd></div>
+            <h4>히라가나</h4>
+            <p>가타카나·한자로 바뀐 미확정 글자를 다시 히라가나로 돌립니다.</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>F9</kbd> / <kbd>F10</kbd></div>
+            <h4>영숫자</h4>
+            <p>F9는 전각 영수 (ＳＡ), F10은 반각 영수 (SA)입니다. URL·코드를 넣을 때 씁니다.</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>←</kbd> <kbd>→</kbd></div>
+            <h4>문절 나누기</h4>
+            <p>긴 문장을 변환할 때 어디서 자를지 옮깁니다. Shift+화살표로 문절 길이를 조절합니다.</p>
+            <p class="tip-ex">きょうはいしゃ → 今日は医者 / 今日歯医者</p>
+          </article>
+          <article class="tip-card">
+            <div class="tip-keys"><kbd>1</kbd>–<kbd>9</kbd></div>
+            <h4>예측 변환</h4>
+            <p>몇 글자만 쳐도 아래에 단어·문장 후보가 뜹니다. 번호 키로 바로 선택하거나 Space로 첫 후보를 넣습니다.</p>
+          </article>
+        </div>
+
+        <div class="tips-note">
+          이 연습 사이트는 IME를 끄고 <b>로마자 키 그대로</b> 치는 훈련입니다.
+          위 키들은 메모장·브라우저에서 일본어 IME를 켠 뒤에 써 보세요.
+        </div>
+      </div>
+    </div>
+
+    <script src="js/categories.js"></script>
+    <script src="js/extra-categories.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
