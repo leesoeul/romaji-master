@@ -391,12 +391,59 @@ input {
   font-size: 18px;
 }
 
-.keyboard {
+.speed {
+  margin-top: 16px;
+  min-height: 1.5em;
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: -0.02em;
+}
+
+.speed .cpm {
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.speed.is-fresh {
+  animation: speedPop 0.55s ease;
+}
+
+.speed.is-fresh .cpm {
+  color: var(--ok);
+}
+
+@keyframes speedPop {
+  0% {
+    transform: scale(0.86);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.keyboard-wrap {
   margin-top: 18px;
-  padding: 18px 14px 10px;
+  padding: 12px 14px 10px;
   background: #faf8f3;
   border: 1px solid var(--line);
   border-radius: 22px;
+}
+
+.keyboard-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.keyboard {
+  padding: 0;
 }
 
 .kb-row {
