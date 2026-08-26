@@ -57,6 +57,17 @@
         <div class="cards" id="category-cards"></div>
       </section>
 
+      <section id="picker-view" class="hidden">
+        <div class="section-title">
+          <div>
+            <h2 id="picker-title">노래 가사</h2>
+            <span id="picker-sub">歌詞</span>
+          </div>
+          <button class="ghost-btn" id="picker-back-btn" type="button">← 목록</button>
+        </div>
+        <div class="cards" id="picker-cards"></div>
+      </section>
+
       <section id="practice-view" class="hidden">
         <div class="panel">
           <div class="practice-head">
@@ -72,11 +83,14 @@
           <div class="stage">
             <div class="yomi" id="yomi" aria-label="요미카타"></div>
             <div class="ja" id="ja"></div>
+            <div class="lyric-viewport" id="lyric-viewport">
+              <div class="prose-body hidden" id="prose-body" lang="ja"></div>
+            </div>
             <div class="ko" id="ko"></div>
             <div class="speed" id="speed-label" aria-live="polite"></div>
           </div>
 
-          <div class="keyboard-wrap">
+          <div class="keyboard-wrap" id="keyboard-wrap">
             <div class="keyboard-toolbar">
               <button class="toggle-btn" id="key-toggle" type="button" aria-pressed="true" title="다음에 칠 키 주황색 표시 보이기/숨기기">
                 <span>キー</span>
@@ -246,6 +260,7 @@
 
     <script src="js/categories.js"></script>
     <script src="js/extra-categories.js"></script>
+    <script src="js/song-categories.js"></script>
     <script src="js/data.js"></script>
     <script src="js/app.js"></script>
   </body>

@@ -450,6 +450,165 @@ body.fit-screen .topbar {
   font-size: 18px;
 }
 
+.prose-body {
+  font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
+  font-size: clamp(20px, 2.8vw, 30px);
+  font-weight: 700;
+  line-height: 2.2;
+  ruby-position: over;
+  text-align: left;
+}
+
+.prose-verse {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1em;
+}
+
+.prose-verse .prose-line {
+  display: block;
+}
+
+.prose-line {
+  color: #d2cdc4;
+  border-radius: 4px;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.prose-line.is-done {
+  color: var(--ink);
+}
+
+.prose-line.is-current {
+  background: linear-gradient(180deg, transparent 62%, var(--orange-soft) 62%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.prose-unit {
+  color: inherit;
+}
+
+.prose-unit.is-done {
+  color: var(--ink);
+}
+
+.prose-unit.is-current {
+  color: var(--orange);
+  border-bottom: 2px solid var(--orange);
+}
+
+.prose-body ruby {
+  ruby-align: center;
+}
+
+.prose-body rt {
+  font-size: 0.38em;
+  font-weight: 600;
+  color: #b7b1a6;
+}
+
+.prose-line.is-done rt,
+.prose-unit.is-done rt {
+  color: #8a847a;
+}
+
+.prose-unit.is-current rt {
+  color: var(--orange);
+}
+
+.prose-line.flash-wrong .prose-unit.is-current {
+  animation: flashRedJa 0.45s ease;
+}
+
+#practice-view.lyric-mode .stage {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  max-width: 40rem;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+#practice-view.lyric-mode .yomi {
+  justify-content: center;
+  font-size: clamp(16px, 2.2vw, 22px);
+  margin-bottom: 8px;
+}
+
+#practice-view.lyric-mode .ja {
+  display: none;
+}
+
+.lyric-viewport {
+  position: relative;
+  width: 100%;
+}
+
+#practice-view.lyric-mode .lyric-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#practice-view.lyric-mode .prose-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  will-change: transform;
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+#practice-view.lyric-mode .prose-verse {
+  align-items: center;
+  gap: 0.35em;
+}
+
+#practice-view.lyric-mode .prose-line {
+  padding: 0.12em 0.2em;
+}
+
+#practice-view.lyric-mode .ko,
+#practice-view.lyric-mode .speed {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+#practice-view.lyric-mode .ko {
+  font-size: 15px;
+}
+
+#practice-view.lyric-mode .ime-note,
+#practice-view.lyric-mode .keyboard-wrap {
+  display: none;
+}
+
+#practice-view:not(.lyric-mode) .lyric-viewport {
+  display: none;
+}
+
+.picker-artist {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#picker-view .section-title {
+  align-items: center;
+}
+
+#picker-view .section-title > div span {
+  display: block;
+  margin-top: 2px;
+}
+
 .speed {
   margin-top: 16px;
   min-height: 1.5em;

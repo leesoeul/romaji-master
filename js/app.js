@@ -29,6 +29,7 @@
 /** 화면(section) 3종 — CSS 클래스 "hidden" 으로 보이기/숨기기 */
 const views = {
   home: document.getElementById("home-view"),       // 카테고리 목록
+  picker: document.getElementById("picker-view"),   // 노래 등 하위 목록
   practice: document.getElementById("practice-view"), // 타자 연습
   result: document.getElementById("result-view"),     // 결과 통계
 };
@@ -62,6 +63,12 @@ const els = {
   statSpeed: document.getElementById("stat-speed"),   // 결과 화면 평균 타/분
   resultTitle: document.getElementById("result-title"),
   continueBtn: document.getElementById("continue-btn"),
+  proseBody: document.getElementById("prose-body"),
+  keyboardWrap: document.getElementById("keyboard-wrap"),
+  pickerCards: document.getElementById("picker-cards"),
+  pickerTitle: document.getElementById("picker-title"),
+  pickerSub: document.getElementById("picker-sub"),
+  lyricViewport: document.getElementById("lyric-viewport"),
 };
 
 // =============================================================================
@@ -128,7 +135,13 @@ const state = {
 
   awaitingContinue: false,
   // 20문항 중간 체크 화면에서 true. Enter / 계속하기 로 이어서 연습.
+
+  pickerParent: null,
+  // 하위 곡 목록을 연 부모 카테고리. 연습에서 뒤로 갈 때 사용.
 };
+
+/** 가사 모드에서 각 소절 DOM (line, units) */
+let proseLineEls = [];
 
 // =============================================================================
 // 3. 유틸리티 함수
@@ -171,6 +184,11 @@ function cssEscape(value) {
 /** 현재 풀고 있는 문항 객체 반환. 없으면 undefined */
 function currentItem() {
   return state.queue[state.index];
+}
+
+/** 노래 가사: 한 곡만, 현재 소절을 화면 가운데에 둠 */
+function isLyricMode() {
+  return state.category?.mode === "lyric";
 }
 
 /**
@@ -232,6 +250,12 @@ function showView(name) {
   // 연습 중일 때는 홈용 버튼 숨기고, 연습용 버튼(홈/표/토글) 표시
   els.homeActions.classList.toggle("hidden", practicing);
   els.practiceActions.classList.toggle("hidden", !practicing);
+  document.body.classList.toggle("fit-screen", name === "practice" || name === "result");
+}
+
+function leavePractice() {
+  if (state.pickerParent) showView("picker");
+  else showView("home");
 }
 
 /**
@@ -289,16 +313,48 @@ function buildCards() {
       const button = document.createElement("button");
       button.className = "card";
       button.type = "button";
+      const isPicker = category.kind === "picker";
+      const n = isPicker ? category.children.length : category.items.length;
+      const countText = isPicker
+        ? `${n}곡 · 가사 연습`
+        : `${n}문항 랜덤 연습`;
       button.innerHTML = `
         <div class="icon">${category.icon}</div>
         <h3>${category.titleKo}</h3>
         <p>${category.titleJa}</p>
-        <span class="count">100문항 랜덤 연습</span>
+        <span class="count">${countText}</span>
       `;
-      button.addEventListener("click", () => startCategory(category, "all"));
+      button.addEventListener("click", () => {
+        if (isPicker) openPicker(category);
+        else startCategory(category, "all");
+      });
       return button;
     }),
   );
+}
+
+function openPicker(category) {
+  state.pickerParent = category;
+  els.pickerTitle.textContent = category.titleKo;
+  els.pickerSub.textContent = category.titleJa;
+  els.pickerCards.replaceChildren(
+    ...category.children.map((song) => {
+      const button = document.createElement("button");
+      button.className = "card";
+      button.type = "button";
+      const artist = song.artist ? `<span class="picker-artist">${song.artist}</span>` : "";
+      button.innerHTML = `
+        <div class="icon">${song.icon}</div>
+        <h3>${song.titleKo}</h3>
+        <p>${song.titleJa}</p>
+        ${artist}
+        <span class="count">${song.items.length}소절 · 가사 연습</span>
+      `;
+      button.addEventListener("click", () => startCategory(song, "all"));
+      return button;
+    }),
+  );
+  showView("picker");
 }
 
 /**
@@ -383,6 +439,120 @@ function renderJapanese(item) {
   els.ja.replaceChildren(...nodes);
 }
 
+/** 가사 하이라이트 단위: 한자 덩어리(후리가나)는 묶고, 가나는 글자 단위 */
+function jaUnits(item) {
+  if (!item.ruby) return [...item.ja].map((ch) => ({ t: ch }));
+  const units = [];
+  item.ruby.forEach((part) => {
+    if (part.f) units.push(part);
+    else units.push(...[...part.t].map((ch) => ({ t: ch })));
+  });
+  return units;
+}
+
+function createProseUnit(part) {
+  if (!part.f) {
+    const span = document.createElement("span");
+    span.className = "prose-unit";
+    span.textContent = part.t;
+    return span;
+  }
+  const ruby = document.createElement("ruby");
+  ruby.className = "prose-unit";
+  ruby.append(part.t);
+  const rt = document.createElement("rt");
+  rt.textContent = part.f;
+  ruby.append(rt);
+  return ruby;
+}
+
+function applyPracticeLayout() {
+  const lyric = isLyricMode();
+  views.practice.classList.toggle("lyric-mode", lyric);
+  els.keyboardWrap.classList.toggle("hidden", lyric);
+  els.proseBody.classList.toggle("hidden", !lyric);
+  if (!lyric) els.proseBody.style.transform = "";
+}
+
+function applyRomaPreference() {
+  if (isLyricMode()) {
+    state.showRoma = localStorage.getItem("showRomaProse") === "true";
+  } else {
+    state.showRoma = localStorage.getItem("showRoma") !== "false";
+  }
+}
+
+function buildProseBody() {
+  proseLineEls = [];
+  els.proseBody.style.transform = "";
+  const frag = document.createDocumentFragment();
+  const bucket = document.createElement("div");
+  bucket.className = "prose-verse";
+  frag.append(bucket);
+
+  state.queue.forEach((item, qi) => {
+    const line = document.createElement("span");
+    line.className = "prose-line is-wait";
+    line.dataset.index = String(qi);
+    const unitEls = jaUnits(item).map((part) => {
+      const el = createProseUnit(part);
+      line.append(el);
+      return el;
+    });
+    bucket.append(line);
+    proseLineEls.push({ line, units: unitEls });
+  });
+
+  els.proseBody.replaceChildren(frag);
+}
+
+function centerLyricLine() {
+  const row = proseLineEls[state.index];
+  const viewport = els.lyricViewport;
+  if (!row || !viewport) return;
+  const viewH = viewport.clientHeight;
+  if (viewH < 40) return;
+  const lineCenter = row.line.offsetTop + row.line.offsetHeight / 2;
+  els.proseBody.style.transform = `translateY(${viewH / 2 - lineCenter}px)`;
+}
+
+function scrollCurrentProseLine() {
+  if (!isLyricMode()) return;
+  centerLyricLine();
+}
+
+function updateProseHighlight() {
+  const idx = state.index;
+  const cursor = state.cursor;
+  const item = currentItem();
+  const romaLen = item ? item.roma.length : 0;
+
+  proseLineEls.forEach((row, i) => {
+    row.line.classList.toggle("is-done", i < idx);
+    row.line.classList.toggle("is-current", i === idx);
+    row.line.classList.toggle("is-wait", i > idx);
+    if (i === idx) row.line.classList.remove("flash-wrong");
+
+    row.units.forEach((el, u) => {
+      el.classList.remove("is-done", "is-current");
+      if (i < idx) {
+        el.classList.add("is-done");
+        return;
+      }
+      if (i !== idx || !romaLen) return;
+      const n = row.units.length;
+      const doneCount = Math.min(n, Math.floor((cursor / romaLen) * n));
+      if (cursor >= romaLen || u < doneCount) {
+        el.classList.add("is-done");
+      } else if (u === doneCount) {
+        el.classList.add("is-current");
+      }
+    });
+  });
+
+  scrollCurrentProseLine(false);
+}
+
 /**
  * 가상 키보드에서 "다음에 눌러야 할 키" 하이라이트
  *
@@ -391,6 +561,7 @@ function renderJapanese(item) {
  * char가 빈 문자열이면 전부 끄기만 함 (문항 완료 시)
  */
 function highlightKey(char) {
+  if (isLyricMode()) return;
   els.keyboard.querySelectorAll(".key").forEach((key) => {
     key.classList.remove("active");
   });
@@ -450,7 +621,11 @@ function renderItem() {
     }),
   );
 
-  renderJapanese(item);
+  if (isLyricMode()) {
+    updateProseHighlight();
+  } else {
+    renderJapanese(item);
+  }
   els.ko.textContent = item.ko;
   applyRomaVisibility();
 
@@ -458,7 +633,9 @@ function renderItem() {
   els.progressLabel.textContent = `${state.index + 1} / ${total}`;
   // 진행 바: 현재 index 기준 (문항 완료 전까지는 index/total)
   els.progressBar.style.width = `${(state.index / total) * 100}%`;
-  els.categoryLabel.textContent = `${state.category.icon} ${state.category.titleKo} · ${state.category.titleJa}`;
+  els.categoryLabel.textContent = isLyricMode()
+    ? `${state.category.icon} ${state.category.titleJa} · ${state.category.titleKo}`
+    : `${state.category.icon} ${state.category.titleKo} · ${state.category.titleJa}`;
   highlightKey(item.roma[state.cursor]);
 }
 
@@ -476,9 +653,12 @@ function renderItem() {
  *   - 배열 전달 → 그 배열만 사용 (틀린 것만 재연습)
  */
 function startCategory(category, mode, sourceItems) {
+  const fromPicker = state.pickerParent?.children?.some((song) => song.id === category.id);
+  if (!fromPicker) state.pickerParent = null;
   state.category = category;
   state.mode = mode;
-  state.queue = shuffle(sourceItems || category.items);
+  const source = sourceItems || category.items;
+  state.queue = category.keepOrder ? [...source] : shuffle(source);
   state.index = 0;
   state.cursor = 0;
   state.missed = false;
@@ -488,9 +668,19 @@ function startCategory(category, mode, sourceItems) {
   state.speeds = [];
   state.lastSpeed = null;
   state.awaitingContinue = false;
+  applyRomaPreference();
+  applyPracticeLayout();
+  if (isLyricMode()) buildProseBody();
+  else els.proseBody.replaceChildren();
   showView("practice");
   renderSpeedLabel(null, false);
   renderItem();
+  if (isLyricMode()) {
+    requestAnimationFrame(() => {
+      centerLyricLine();
+      requestAnimationFrame(centerLyricLine);
+    });
+  }
 }
 
 /**
@@ -505,6 +695,19 @@ function startCategory(category, mode, sourceItems) {
  * showRoma가 false면 yomi 대신 ja(일본어)에 flash — 로마자 숨긴 연습 모드용
  */
 function flashWrong() {
+  if (isLyricMode()) {
+    const line = proseLineEls[state.index]?.line;
+    if (!line) return;
+    line.classList.remove("flash-wrong");
+    void line.offsetWidth;
+    line.classList.add("flash-wrong");
+    if (state.showRoma) {
+      els.yomi.classList.remove("flash-wrong");
+      void els.yomi.offsetWidth;
+      els.yomi.classList.add("flash-wrong");
+    }
+    return;
+  }
   const target = state.showRoma ? els.yomi : els.ja;
   target.classList.remove("flash-wrong");
   void target.offsetWidth;
@@ -521,41 +724,49 @@ function flashWrong() {
  *    20문항마다 중간 체크, queue 끝이면 챕터 완료
  */
 function completeItem() {
-  state.locked = true;
-  els.yomi.classList.add("flash-ok");
-  els.ja.classList.add("flash-ok");
-  highlightKey("");
-  els.progressBar.style.width = `${((state.index + 1) / state.queue.length) * 100}%`;
-
   const item = currentItem();
   const elapsedMs = Math.max(performance.now() - (state.itemStartedAt ?? performance.now()), 1);
   const speed = { chars: item.roma.length, ms: elapsedMs, cpm: calcCpm(item.roma.length, elapsedMs) };
   state.speeds.push(speed);
   state.lastSpeed = speed;
   renderSpeedLabel(speed, true);
+  els.progressBar.style.width = `${((state.index + 1) / state.queue.length) * 100}%`;
 
   if (state.missed) {
     state.missedItems.push(item);
   }
 
-  window.setTimeout(() => {
-    state.index += 1;
-    state.cursor = 0;
-    state.missed = false;
-    state.locked = false;
-    state.itemStartedAt = null;
+  if (isLyricMode()) {
+    updateProseHighlight();
+    advanceSession();
+    return;
+  }
 
-    if (state.index >= state.queue.length) {
-      showSummary(true);
-      return;
-    }
-    if (state.index % CHECKPOINT_SIZE === 0) {
-      showSummary(false);
-      return;
-    }
-    renderSpeedLabel(state.lastSpeed, false);
-    renderItem();
-  }, 1000);
+  state.locked = true;
+  els.yomi.classList.add("flash-ok");
+  els.ja.classList.add("flash-ok");
+  highlightKey("");
+
+  window.setTimeout(advanceSession, 1000);
+}
+
+function advanceSession() {
+  state.index += 1;
+  state.cursor = 0;
+  state.missed = false;
+  state.locked = false;
+  state.itemStartedAt = null;
+
+  if (state.index >= state.queue.length) {
+    showSummary(true);
+    return;
+  }
+  if (!isLyricMode() && state.index % CHECKPOINT_SIZE === 0) {
+    showSummary(false);
+    return;
+  }
+  renderSpeedLabel(state.lastSpeed, false);
+  renderItem();
 }
 
 /**
@@ -615,6 +826,7 @@ function continuePractice() {
   showView("practice");
   renderSpeedLabel(state.lastSpeed, false);
   renderItem();
+  if (isLyricMode()) requestAnimationFrame(centerLyricLine);
 }
 
 // =============================================================================
@@ -665,6 +877,10 @@ function onKeyDown(event) {
       return;
     }
     if (!views.practice.classList.contains("hidden")) {
+      leavePractice();
+      return;
+    }
+    if (!views.picker.classList.contains("hidden")) {
       showView("home");
     }
     return;
@@ -724,8 +940,9 @@ function onKeyDown(event) {
 // 오버레이 클릭 시 event.target === els.overlay 조건:
 //   모달 바깥(반투명 배경)만 클릭했을 때 닫기. 안쪽 표 클릭은 무시.
 
-document.getElementById("home-btn").addEventListener("click", () => showView("home"));
-document.getElementById("result-home-btn").addEventListener("click", () => showView("home"));
+document.getElementById("home-btn").addEventListener("click", leavePractice);
+document.getElementById("result-home-btn").addEventListener("click", leavePractice);
+document.getElementById("picker-back-btn").addEventListener("click", () => showView("home"));
 
 document.getElementById("table-btn").addEventListener("click", () => {
   els.overlay.classList.remove("hidden");
@@ -758,7 +975,8 @@ els.retryWrong.addEventListener("click", () => {
 // ローマ字 표시 토글 + localStorage 저장
 els.romaToggle.addEventListener("click", () => {
   state.showRoma = !state.showRoma;
-  localStorage.setItem("showRoma", String(state.showRoma));
+  const key = isLyricMode() ? "showRomaProse" : "showRoma";
+  localStorage.setItem(key, String(state.showRoma));
   applyRomaVisibility();
   els.romaToggle.blur(); // 클릭 후 포커스 링 제거
 });
@@ -772,6 +990,9 @@ els.keyToggle.addEventListener("click", () => {
 
 // 전역 키보드 — 연습 입력의 핵심
 window.addEventListener("keydown", onKeyDown);
+window.addEventListener("resize", () => {
+  if (isLyricMode() && !views.practice.classList.contains("hidden")) centerLyricLine();
+});
 
 // =============================================================================
 // 9. 앱 초기화 — 스크립트 로드 시 맨 아래에서 1회 실행
