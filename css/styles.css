@@ -40,8 +40,11 @@ input {
 
 .app {
   width: min(1120px, calc(100% - 32px));
+  min-height: 100%;
   margin: 0 auto;
   padding: 28px 0 48px;
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar {
@@ -50,6 +53,7 @@ input {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 22px;
+  flex: 0 0 auto;
 }
 
 .brand {
@@ -278,12 +282,61 @@ input {
   display: none !important;
 }
 
+html:has(body.fit-screen),
+body.fit-screen {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.fit-screen .app {
+  height: 100%;
+  min-height: 0;
+  padding: 12px 0 max(10px, env(safe-area-inset-bottom));
+}
+
+body.fit-screen .topbar {
+  margin-bottom: 12px;
+}
+
+#home-view,
+#picker-view {
+  flex: 0 0 auto;
+}
+
+#practice-view,
+#result-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#practice-view .panel,
+#result-view .panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#practice-view .panel {
+  padding: 8px 12px 6px;
+}
+
+#result-view .panel {
+  justify-content: center;
+}
+
 .practice-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex: 0 0 auto;
 }
 
 .progress-wrap {
@@ -314,11 +367,15 @@ input {
 }
 
 .stage {
-  min-height: 280px;
-  display: grid;
-  place-items: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 12px 8px 8px;
+  padding: 0 4px;
+  overflow: hidden;
 }
 
 .yomi {
@@ -330,7 +387,8 @@ input {
   font-size: clamp(22px, 4vw, 40px);
   letter-spacing: 0.04em;
   line-height: 1.35;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
+  flex: 0 0 auto;
 }
 
 .yomi span {
@@ -360,11 +418,12 @@ input {
 
 .ja {
   font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
-  font-size: clamp(26px, 4.4vw, 48px);
+  font-size: clamp(28px, 4.6vw, 48px);
   font-weight: 700;
-  margin-bottom: 10px;
-  line-height: 1.85;
+  margin-bottom: 6px;
+  line-height: 1.75;
   ruby-position: over;
+  flex: 0 0 auto;
 }
 
 .ja ruby {
@@ -429,17 +488,18 @@ input {
 }
 
 .keyboard-wrap {
-  margin-top: 18px;
-  padding: 12px 14px 10px;
+  margin-top: 6px;
+  padding: 6px 8px 4px;
   background: #faf8f3;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 16px;
+  flex: 0 0 auto;
 }
 
 .keyboard-toolbar {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .keyboard {
@@ -449,21 +509,21 @@ input {
 .kb-row {
   display: flex;
   justify-content: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 5px;
+  margin-bottom: 5px;
 }
 
 .key {
-  min-width: 46px;
-  height: 46px;
-  border-radius: 10px;
+  min-width: 42px;
+  height: 40px;
+  border-radius: 8px;
   border: 1px solid #d9d3c8;
   background: white;
   color: #6f6a63;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
   box-shadow: 0 1px 0 #ece7de;
 }
 
@@ -475,12 +535,12 @@ input {
 
 .key.shift {
   min-width: 74px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .key.space {
   min-width: 280px;
-  font-size: 13px;
+  font-size: 15px;
   color: #8b8680;
 }
 
@@ -493,10 +553,7 @@ input {
 }
 
 .fingers {
-  display: flex;
-  justify-content: center;
-  gap: 54px;
-  margin-top: 8px;
+  display: none;
 }
 
 .fingers i {
@@ -709,10 +766,11 @@ kbd {
 }
 
 .ime-note {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: 12px;
   color: #a39c92;
   text-align: center;
+  flex: 0 0 auto;
 }
 
 @keyframes flashRed {
@@ -776,8 +834,8 @@ kbd {
 
   .key {
     min-width: 32px;
-    height: 38px;
-    font-size: 12px;
+    height: 36px;
+    font-size: 15px;
   }
 
   .key.space {
