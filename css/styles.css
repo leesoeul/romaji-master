@@ -346,9 +346,23 @@ body.fit-screen .topbar {
 .progress-meta {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+#category-label {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+#progress-label {
+  flex: 0 0 auto;
+  font-size: 14px;
 }
 
 .bar {
@@ -447,7 +461,8 @@ body.fit-screen .topbar {
 
 .ko {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 20px;
+  flex: 0 0 auto;
 }
 
 .prose-body {
@@ -610,13 +625,14 @@ body.fit-screen .topbar {
 }
 
 .speed {
-  margin-top: 16px;
-  min-height: 1.5em;
+  margin-top: 6px;
+  min-height: 1.3em;
   font-family: "JetBrains Mono", "SFMono-Regular", monospace;
   font-size: 14px;
   font-weight: 700;
   color: var(--muted);
   letter-spacing: -0.02em;
+  flex: 0 0 auto;
 }
 
 .speed .cpm {
@@ -1003,6 +1019,20 @@ kbd {
 
   .key.shift {
     min-width: 54px;
+  }
+}
+
+@media (max-height: 820px) {
+  .brand h1 {
+    font-size: 22px;
+  }
+
+  .brand p {
+    display: none;
+  }
+
+  .ime-note {
+    display: none;
   }
 }
 
