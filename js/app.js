@@ -330,7 +330,7 @@ function buildCards() {
   els.cards.replaceChildren(
     ...CATEGORIES.map((category) => {
       const button = document.createElement("button");
-      button.className = category.highlight ? "card card-highlight" : "card";
+      button.className = "card";
       button.type = "button";
       const isPicker = category.kind === "picker";
       const n = isPicker ? category.children.length : category.items.length;
@@ -339,7 +339,9 @@ function buildCards() {
         : category.mode === "ime"
           ? `${n}문항 · IME 한자 변환`
           : `${n}문항 랜덤 연습`;
+      const star = category.highlight ? '<span class="card-star">★</span>' : '';
       button.innerHTML = `
+        ${star}
         <div class="icon">${category.icon}</div>
         <h3>${category.titleKo}</h3>
         <p>${category.titleJa}</p>
