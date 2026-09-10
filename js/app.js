@@ -69,6 +69,9 @@ const els = {
   pickerTitle: document.getElementById("picker-title"),
   pickerSub: document.getElementById("picker-sub"),
   lyricViewport: document.getElementById("lyric-viewport"),
+  imeFieldWrap: document.getElementById("ime-field-wrap"),
+  imeInput: document.getElementById("ime-input"),
+  imeNote: document.getElementById("ime-note"),
 };
 
 // =============================================================================
@@ -191,6 +194,15 @@ function isLyricMode() {
   return state.category?.mode === "lyric";
 }
 
+/** IME로 한자 변환까지 치고, 최종 문자열만 맞으면 되는 실전 */
+function isImeMode() {
+  return state.category?.mode === "ime";
+}
+
+function normalizeJa(value) {
+  return (value || "").normalize("NFC").trim();
+}
+
 /**
  * 타자 속도(타/분) 계산
  *
@@ -199,6 +211,12 @@ function isLyricMode() {
  */
 function calcCpm(chars, ms) {
   return Math.round((chars * 60000) / Math.max(ms, 1));
+}
+
+function markTypingStarted() {
+  if (state.locked || state.itemStartedAt != null) return;
+  if (views.practice.classList.contains("hidden")) return;
+  state.itemStartedAt = performance.now();
 }
 
 /**
@@ -253,7 +271,18 @@ function showView(name) {
   document.body.classList.toggle("fit-screen", name === "practice" || name === "result");
 }
 
+function onImeInput(event) {
+  if (!isImeMode() || state.locked) return;
+  if (event.isComposing) return;
+  const item = currentItem();
+  if (!item) return;
+  if (normalizeJa(els.imeInput.value) === normalizeJa(item.ja)) {
+    completeItem();
+  }
+}
+
 function leavePractice() {
+  if (isImeMode()) resetImeInput();
   if (state.pickerParent) showView("picker");
   else showView("home");
 }
@@ -317,7 +346,9 @@ function buildCards() {
       const n = isPicker ? category.children.length : category.items.length;
       const countText = isPicker
         ? `${n}곡 · 가사 연습`
-        : `${n}문항 랜덤 연습`;
+        : category.mode === "ime"
+          ? `${n}문항 · IME 한자 변환`
+          : `${n}문항 랜덤 연습`;
       button.innerHTML = `
         <div class="icon">${category.icon}</div>
         <h3>${category.titleKo}</h3>
@@ -468,10 +499,34 @@ function createProseUnit(part) {
 
 function applyPracticeLayout() {
   const lyric = isLyricMode();
+  const ime = isImeMode();
   views.practice.classList.toggle("lyric-mode", lyric);
-  els.keyboardWrap.classList.toggle("hidden", lyric);
+  views.practice.classList.toggle("ime-mode", ime);
+  els.keyboardWrap.classList.toggle("hidden", lyric || ime);
   els.proseBody.classList.toggle("hidden", !lyric);
+  els.imeFieldWrap.classList.toggle("hidden", !ime);
+  if (els.imeNote) {
+    els.imeNote.textContent = ime
+      ? "일본어 IME를 켜고 히라가나 → 한자 변환까지 입력하세요"
+      : "영문(英数) 입력으로 두고 타자하세요 · IME는 꺼 주세요";
+  }
   if (!lyric) els.proseBody.style.transform = "";
+  if (!ime) {
+    els.imeInput.value = "";
+    els.imeInput.blur();
+  }
+}
+
+function focusImeInput() {
+  if (!isImeMode() || state.locked) return;
+  requestAnimationFrame(() => {
+    els.imeInput.focus({ preventScroll: true });
+  });
+}
+
+function resetImeInput() {
+  els.imeInput.value = "";
+  els.imeInput.classList.remove("flash-ok", "flash-wrong");
 }
 
 function applyRomaPreference() {
@@ -561,7 +616,7 @@ function updateProseHighlight() {
  * char가 빈 문자열이면 전부 끄기만 함 (문항 완료 시)
  */
 function highlightKey(char) {
-  if (isLyricMode()) return;
+  if (isLyricMode() || isImeMode()) return;
   els.keyboard.querySelectorAll(".key").forEach((key) => {
     key.classList.remove("active");
   });
@@ -611,15 +666,22 @@ function renderItem() {
   if (!item) return;
 
   els.yomi.classList.remove("flash-wrong", "flash-ok");
-  els.yomi.replaceChildren(
-    ...[...item.roma].map((char, i) => {
-      const span = document.createElement("span");
-      span.textContent = char;
-      if (i < state.cursor) span.className = "done";       // 이미 입력한 글자
-      else if (i === state.cursor) span.className = "current"; // 지금 입력할 글자
-      return span;
-    }),
-  );
+  if (isImeMode()) {
+    const hint = document.createElement("span");
+    hint.className = "done";
+    hint.textContent = item.roma;
+    els.yomi.replaceChildren(hint);
+  } else {
+    els.yomi.replaceChildren(
+      ...[...item.roma].map((char, i) => {
+        const span = document.createElement("span");
+        span.textContent = char;
+        if (i < state.cursor) span.className = "done";
+        else if (i === state.cursor) span.className = "current";
+        return span;
+      }),
+    );
+  }
 
   if (isLyricMode()) {
     updateProseHighlight();
@@ -636,6 +698,11 @@ function renderItem() {
   els.categoryLabel.textContent = isLyricMode()
     ? `${state.category.icon} ${state.category.titleJa} · ${state.category.titleKo}`
     : `${state.category.icon} ${state.category.titleKo} · ${state.category.titleJa}`;
+  if (isImeMode()) {
+    resetImeInput();
+    focusImeInput();
+    return;
+  }
   highlightKey(item.roma[state.cursor]);
 }
 
@@ -681,6 +748,7 @@ function startCategory(category, mode, sourceItems) {
       requestAnimationFrame(centerLyricLine);
     });
   }
+  if (isImeMode()) focusImeInput();
 }
 
 /**
@@ -725,11 +793,19 @@ function flashWrong() {
  */
 function completeItem() {
   const item = currentItem();
-  const elapsedMs = Math.max(performance.now() - (state.itemStartedAt ?? performance.now()), 1);
-  const speed = { chars: item.roma.length, ms: elapsedMs, cpm: calcCpm(item.roma.length, elapsedMs) };
-  state.speeds.push(speed);
-  state.lastSpeed = speed;
-  renderSpeedLabel(speed, true);
+  const started = state.itemStartedAt;
+  const elapsedMs = started == null ? 0 : performance.now() - started;
+  // 일반·실전 모두 로마자 글자 수로 맞춰, 같은 문장의 타/분을 비교할 수 있게 한다.
+  const charCount = item.roma.length;
+  if (elapsedMs >= 80) {
+    const speed = { chars: charCount, ms: elapsedMs, cpm: calcCpm(charCount, elapsedMs) };
+    state.speeds.push(speed);
+    state.lastSpeed = speed;
+    renderSpeedLabel(speed, true);
+  } else {
+    state.lastSpeed = null;
+    renderSpeedLabel(null, false);
+  }
   els.progressBar.style.width = `${((state.index + 1) / state.queue.length) * 100}%`;
 
   if (state.missed) {
@@ -745,6 +821,12 @@ function completeItem() {
   state.locked = true;
   els.yomi.classList.add("flash-ok");
   els.ja.classList.add("flash-ok");
+  if (isImeMode()) {
+    els.imeInput.classList.remove("flash-ok");
+    void els.imeInput.offsetWidth;
+    els.imeInput.classList.add("flash-ok");
+    els.imeInput.blur();
+  }
   highlightKey("");
 
   window.setTimeout(advanceSession, 1000);
@@ -817,6 +899,9 @@ function showSummary(isFinal) {
   }
 
   showView("result");
+  if (isImeMode()) {
+    els.imeInput.blur();
+  }
 }
 
 /** 중간 체크 후 다음 문항부터 이어서 연습 */
@@ -827,6 +912,7 @@ function continuePractice() {
   renderSpeedLabel(state.lastSpeed, false);
   renderItem();
   if (isLyricMode()) requestAnimationFrame(centerLyricLine);
+  if (isImeMode()) focusImeInput();
 }
 
 // =============================================================================
@@ -876,6 +962,7 @@ function onKeyDown(event) {
       closeOverlays();
       return;
     }
+    if (isImeMode() && event.isComposing) return;
     if (!views.practice.classList.contains("hidden")) {
       leavePractice();
       return;
@@ -890,6 +977,14 @@ function onKeyDown(event) {
   if (event.key === "Enter" && state.awaitingContinue) {
     event.preventDefault();
     continuePractice();
+    return;
+  }
+
+  // 실전(IME)은 input이 한자 변환을 담당. 로마자 한 글자 판정은 하지 않음.
+  if (isImeMode()) {
+    if (!event.metaKey && !event.ctrlKey && !event.altKey) {
+      if (event.key !== "Tab" && event.key !== "Shift") markTypingStarted();
+    }
     return;
   }
 
@@ -979,6 +1074,7 @@ els.romaToggle.addEventListener("click", () => {
   localStorage.setItem(key, String(state.showRoma));
   applyRomaVisibility();
   els.romaToggle.blur(); // 클릭 후 포커스 링 제거
+  if (isImeMode()) focusImeInput();
 });
 
 els.keyToggle.addEventListener("click", () => {
@@ -993,6 +1089,11 @@ window.addEventListener("keydown", onKeyDown);
 window.addEventListener("resize", () => {
   if (isLyricMode() && !views.practice.classList.contains("hidden")) centerLyricLine();
 });
+
+els.imeInput.addEventListener("input", onImeInput);
+els.imeInput.addEventListener("compositionstart", markTypingStarted);
+els.imeInput.addEventListener("compositionend", onImeInput);
+els.imeFieldWrap.addEventListener("click", () => focusImeInput());
 
 // =============================================================================
 // 9. 앱 초기화 — 스크립트 로드 시 맨 아래에서 1회 실행
