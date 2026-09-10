@@ -42,34 +42,58 @@ input {
   width: min(1120px, calc(100% - 32px));
   min-height: 100%;
   margin: 0 auto;
-  padding: 28px 0 48px;
+  padding: 36px 0 48px;
   display: flex;
   flex-direction: column;
 }
 
 .topbar {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: 28px;
   flex: 0 0 auto;
 }
 
 .brand {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto;
+  align-items: center;
+  column-gap: 18px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.brand-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.brand-text {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
+  min-width: 0;
 }
 
 .brand h1 {
-  font-size: 28px;
-  letter-spacing: -0.03em;
+  font-size: 46px;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  white-space: nowrap;
 }
 
 .brand p {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .ghost-btn,
@@ -297,6 +321,24 @@ body.fit-screen .app {
 
 body.fit-screen .topbar {
   margin-bottom: 12px;
+}
+
+body.fit-screen .brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+body.fit-screen .brand {
+  gap: 12px;
+}
+
+body.fit-screen .brand h1 {
+  font-size: 28px;
+}
+
+body.fit-screen .brand p {
+  font-size: 13px;
 }
 
 #home-view,
@@ -605,6 +647,54 @@ body.fit-screen .topbar {
 }
 
 #practice-view:not(.lyric-mode) .lyric-viewport {
+  display: none;
+}
+
+#practice-view:not(.ime-mode) .ime-field-wrap {
+  display: none;
+}
+
+.ime-field-wrap {
+  width: min(100%, 40rem);
+  margin-top: 16px;
+  flex: 0 0 auto;
+}
+
+.ime-field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#ime-input {
+  width: 100%;
+  font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
+  font-size: clamp(24px, 4.2vw, 42px);
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid var(--orange);
+  border-radius: 0;
+  outline: none;
+  padding: 6px 8px 10px;
+  caret-color: var(--orange);
+}
+
+#ime-input.flash-ok {
+  animation: flashGreen 0.7s ease forwards;
+}
+
+#ime-input.flash-wrong {
+  animation: flashRed 0.45s ease;
+}
+
+#practice-view.ime-mode .keyboard-wrap {
   display: none;
 }
 
@@ -1023,11 +1113,11 @@ kbd {
 }
 
 @media (max-height: 820px) {
-  .brand h1 {
+  body.fit-screen .brand h1 {
     font-size: 22px;
   }
 
-  .brand p {
+  body.fit-screen .brand p {
     display: none;
   }
 
@@ -1044,8 +1134,22 @@ kbd {
     align-items: stretch;
   }
 
+  .brand {
+    grid-template-columns: auto 1fr;
+  }
+
+  .brand-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+  }
+
   .brand h1 {
-    font-size: 22px;
+    font-size: 32px;
+  }
+
+  .brand p {
+    font-size: 14px;
   }
 
   .keyboard {
