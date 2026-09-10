@@ -63,12 +63,10 @@ const els = {
   statSpeed: document.getElementById("stat-speed"),   // 결과 화면 평균 타/분
   resultTitle: document.getElementById("result-title"),
   continueBtn: document.getElementById("continue-btn"),
-  proseBody: document.getElementById("prose-body"),
   keyboardWrap: document.getElementById("keyboard-wrap"),
   pickerCards: document.getElementById("picker-cards"),
   pickerTitle: document.getElementById("picker-title"),
   pickerSub: document.getElementById("picker-sub"),
-  lyricViewport: document.getElementById("lyric-viewport"),
   imeFieldWrap: document.getElementById("ime-field-wrap"),
   imeInput: document.getElementById("ime-input"),
   imeNote: document.getElementById("ime-note"),
@@ -143,9 +141,6 @@ const state = {
   // 하위 곡 목록을 연 부모 카테고리. 연습에서 뒤로 갈 때 사용.
 };
 
-/** 가사 모드에서 각 소절 DOM (line, units) */
-let proseLineEls = [];
-
 // =============================================================================
 // 3. 유틸리티 함수
 // =============================================================================
@@ -187,11 +182,6 @@ function cssEscape(value) {
 /** 현재 풀고 있는 문항 객체 반환. 없으면 undefined */
 function currentItem() {
   return state.queue[state.index];
-}
-
-/** 노래 가사: 한 곡만, 현재 소절을 화면 가운데에 둠 */
-function isLyricMode() {
-  return state.category?.mode === "lyric";
 }
 
 /** IME로 한자 변환까지 치고, 최종 문자열만 맞으면 되는 실전 */
@@ -470,47 +460,16 @@ function renderJapanese(item) {
   els.ja.replaceChildren(...nodes);
 }
 
-/** 가사 하이라이트 단위: 한자 덩어리(후리가나)는 묶고, 가나는 글자 단위 */
-function jaUnits(item) {
-  if (!item.ruby) return [...item.ja].map((ch) => ({ t: ch }));
-  const units = [];
-  item.ruby.forEach((part) => {
-    if (part.f) units.push(part);
-    else units.push(...[...part.t].map((ch) => ({ t: ch })));
-  });
-  return units;
-}
-
-function createProseUnit(part) {
-  if (!part.f) {
-    const span = document.createElement("span");
-    span.className = "prose-unit";
-    span.textContent = part.t;
-    return span;
-  }
-  const ruby = document.createElement("ruby");
-  ruby.className = "prose-unit";
-  ruby.append(part.t);
-  const rt = document.createElement("rt");
-  rt.textContent = part.f;
-  ruby.append(rt);
-  return ruby;
-}
-
 function applyPracticeLayout() {
-  const lyric = isLyricMode();
   const ime = isImeMode();
-  views.practice.classList.toggle("lyric-mode", lyric);
   views.practice.classList.toggle("ime-mode", ime);
-  els.keyboardWrap.classList.toggle("hidden", lyric || ime);
-  els.proseBody.classList.toggle("hidden", !lyric);
+  els.keyboardWrap.classList.toggle("hidden", ime);
   els.imeFieldWrap.classList.toggle("hidden", !ime);
   if (els.imeNote) {
     els.imeNote.textContent = ime
       ? "일본어 IME를 켜고 히라가나 → 한자 변환까지 입력하세요"
       : "영문(英数) 입력으로 두고 타자하세요 · IME는 꺼 주세요";
   }
-  if (!lyric) els.proseBody.style.transform = "";
   if (!ime) {
     els.imeInput.value = "";
     els.imeInput.blur();
@@ -530,82 +489,7 @@ function resetImeInput() {
 }
 
 function applyRomaPreference() {
-  if (isLyricMode()) {
-    state.showRoma = localStorage.getItem("showRomaProse") === "true";
-  } else {
-    state.showRoma = localStorage.getItem("showRoma") !== "false";
-  }
-}
-
-function buildProseBody() {
-  proseLineEls = [];
-  els.proseBody.style.transform = "";
-  const frag = document.createDocumentFragment();
-  const bucket = document.createElement("div");
-  bucket.className = "prose-verse";
-  frag.append(bucket);
-
-  state.queue.forEach((item, qi) => {
-    const line = document.createElement("span");
-    line.className = "prose-line is-wait";
-    line.dataset.index = String(qi);
-    const unitEls = jaUnits(item).map((part) => {
-      const el = createProseUnit(part);
-      line.append(el);
-      return el;
-    });
-    bucket.append(line);
-    proseLineEls.push({ line, units: unitEls });
-  });
-
-  els.proseBody.replaceChildren(frag);
-}
-
-function centerLyricLine() {
-  const row = proseLineEls[state.index];
-  const viewport = els.lyricViewport;
-  if (!row || !viewport) return;
-  const viewH = viewport.clientHeight;
-  if (viewH < 40) return;
-  const lineCenter = row.line.offsetTop + row.line.offsetHeight / 2;
-  els.proseBody.style.transform = `translateY(${viewH / 2 - lineCenter}px)`;
-}
-
-function scrollCurrentProseLine() {
-  if (!isLyricMode()) return;
-  centerLyricLine();
-}
-
-function updateProseHighlight() {
-  const idx = state.index;
-  const cursor = state.cursor;
-  const item = currentItem();
-  const romaLen = item ? item.roma.length : 0;
-
-  proseLineEls.forEach((row, i) => {
-    row.line.classList.toggle("is-done", i < idx);
-    row.line.classList.toggle("is-current", i === idx);
-    row.line.classList.toggle("is-wait", i > idx);
-    if (i === idx) row.line.classList.remove("flash-wrong");
-
-    row.units.forEach((el, u) => {
-      el.classList.remove("is-done", "is-current");
-      if (i < idx) {
-        el.classList.add("is-done");
-        return;
-      }
-      if (i !== idx || !romaLen) return;
-      const n = row.units.length;
-      const doneCount = Math.min(n, Math.floor((cursor / romaLen) * n));
-      if (cursor >= romaLen || u < doneCount) {
-        el.classList.add("is-done");
-      } else if (u === doneCount) {
-        el.classList.add("is-current");
-      }
-    });
-  });
-
-  scrollCurrentProseLine(false);
+  state.showRoma = localStorage.getItem("showRoma") !== "false";
 }
 
 /**
@@ -616,7 +500,7 @@ function updateProseHighlight() {
  * char가 빈 문자열이면 전부 끄기만 함 (문항 완료 시)
  */
 function highlightKey(char) {
-  if (isLyricMode() || isImeMode()) return;
+  if (isImeMode()) return;
   els.keyboard.querySelectorAll(".key").forEach((key) => {
     key.classList.remove("active");
   });
@@ -683,11 +567,7 @@ function renderItem() {
     );
   }
 
-  if (isLyricMode()) {
-    updateProseHighlight();
-  } else {
-    renderJapanese(item);
-  }
+  renderJapanese(item);
   els.ko.textContent = item.ko;
   applyRomaVisibility();
 
@@ -695,9 +575,7 @@ function renderItem() {
   els.progressLabel.textContent = `${state.index + 1} / ${total}`;
   // 진행 바: 현재 index 기준 (문항 완료 전까지는 index/total)
   els.progressBar.style.width = `${(state.index / total) * 100}%`;
-  els.categoryLabel.textContent = isLyricMode()
-    ? `${state.category.icon} ${state.category.titleJa} · ${state.category.titleKo}`
-    : `${state.category.icon} ${state.category.titleKo} · ${state.category.titleJa}`;
+  els.categoryLabel.textContent = `${state.category.icon} ${state.category.titleKo} · ${state.category.titleJa}`;
   if (isImeMode()) {
     resetImeInput();
     focusImeInput();
@@ -737,17 +615,9 @@ function startCategory(category, mode, sourceItems) {
   state.awaitingContinue = false;
   applyRomaPreference();
   applyPracticeLayout();
-  if (isLyricMode()) buildProseBody();
-  else els.proseBody.replaceChildren();
   showView("practice");
   renderSpeedLabel(null, false);
   renderItem();
-  if (isLyricMode()) {
-    requestAnimationFrame(() => {
-      centerLyricLine();
-      requestAnimationFrame(centerLyricLine);
-    });
-  }
   if (isImeMode()) focusImeInput();
 }
 
@@ -763,19 +633,6 @@ function startCategory(category, mode, sourceItems) {
  * showRoma가 false면 yomi 대신 ja(일본어)에 flash — 로마자 숨긴 연습 모드용
  */
 function flashWrong() {
-  if (isLyricMode()) {
-    const line = proseLineEls[state.index]?.line;
-    if (!line) return;
-    line.classList.remove("flash-wrong");
-    void line.offsetWidth;
-    line.classList.add("flash-wrong");
-    if (state.showRoma) {
-      els.yomi.classList.remove("flash-wrong");
-      void els.yomi.offsetWidth;
-      els.yomi.classList.add("flash-wrong");
-    }
-    return;
-  }
   const target = state.showRoma ? els.yomi : els.ja;
   target.classList.remove("flash-wrong");
   void target.offsetWidth;
@@ -812,12 +669,6 @@ function completeItem() {
     state.missedItems.push(item);
   }
 
-  if (isLyricMode()) {
-    updateProseHighlight();
-    advanceSession();
-    return;
-  }
-
   state.locked = true;
   els.yomi.classList.add("flash-ok");
   els.ja.classList.add("flash-ok");
@@ -843,7 +694,7 @@ function advanceSession() {
     showSummary(true);
     return;
   }
-  if (!isLyricMode() && state.index % CHECKPOINT_SIZE === 0) {
+  if (state.index % CHECKPOINT_SIZE === 0) {
     showSummary(false);
     return;
   }
@@ -911,7 +762,6 @@ function continuePractice() {
   showView("practice");
   renderSpeedLabel(state.lastSpeed, false);
   renderItem();
-  if (isLyricMode()) requestAnimationFrame(centerLyricLine);
   if (isImeMode()) focusImeInput();
 }
 
@@ -1070,8 +920,7 @@ els.retryWrong.addEventListener("click", () => {
 // ローマ字 표시 토글 + localStorage 저장
 els.romaToggle.addEventListener("click", () => {
   state.showRoma = !state.showRoma;
-  const key = isLyricMode() ? "showRomaProse" : "showRoma";
-  localStorage.setItem(key, String(state.showRoma));
+  localStorage.setItem("showRoma", String(state.showRoma));
   applyRomaVisibility();
   els.romaToggle.blur(); // 클릭 후 포커스 링 제거
   if (isImeMode()) focusImeInput();
@@ -1086,9 +935,6 @@ els.keyToggle.addEventListener("click", () => {
 
 // 전역 키보드 — 연습 입력의 핵심
 window.addEventListener("keydown", onKeyDown);
-window.addEventListener("resize", () => {
-  if (isLyricMode() && !views.practice.classList.contains("hidden")) centerLyricLine();
-});
 
 els.imeInput.addEventListener("input", onImeInput);
 els.imeInput.addEventListener("compositionstart", markTypingStarted);
