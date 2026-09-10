@@ -12,11 +12,12 @@ const imeSeen = new Set();
   });
 });
 
-CATEGORIES.splice(1, 0, {
+CATEGORIES.push({
   id: "ime-live",
   icon: "✍️",
   titleKo: "실전 연습",
   titleJa: "漢字変換",
   mode: "ime",
   items: IME_ITEMS,
+  highlight: true,
 });

@@ -330,7 +330,7 @@ function buildCards() {
   els.cards.replaceChildren(
     ...CATEGORIES.map((category) => {
       const button = document.createElement("button");
-      button.className = "card";
+      button.className = category.highlight ? "card card-highlight" : "card";
       button.type = "button";
       const isPicker = category.kind === "picker";
       const n = isPicker ? category.children.length : category.items.length;

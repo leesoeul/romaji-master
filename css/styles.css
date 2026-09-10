@@ -273,6 +273,27 @@ input {
   border-color: #f0b48a;
 }
 
+.card-highlight {
+  background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+  border: 2px solid var(--orange);
+  box-shadow: 0 4px 12px rgba(228, 122, 48, 0.15), var(--shadow);
+}
+
+.card-highlight:hover {
+  border-color: var(--orange);
+  box-shadow: 0 6px 16px rgba(228, 122, 48, 0.25), var(--shadow);
+}
+
+.card-highlight .icon {
+  background: var(--orange);
+  color: white;
+}
+
+.card-highlight h3 {
+  color: var(--orange);
+  font-weight: 700;
+}
+
 .card .icon {
   width: 42px;
   height: 42px;
